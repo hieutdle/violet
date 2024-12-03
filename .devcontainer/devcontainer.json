@@ -1,0 +1,30 @@
+{
+	"name": "bd2go dev",
+	"build": {
+	  "dockerfile": "./Dockerfile"
+	},
+	"features": {
+	  "ghcr.io/devcontainers/features/docker-in-docker:2": {
+		"version": "latest",
+		"enableNonRootDocker": "true",
+		"moby": "true"
+	  },
+	  "ghcr.io/devcontainers/features/go:1": {
+		"version": "1.23.3"
+	  }
+	},
+	"postCreateCommand": "go mod tidy && go version",
+	"customizations": {
+	  "vscode": {
+		"extensions": [
+		  "golang.go",
+		  "ms-azuretools.vscode-docker",
+		  "dbaeumer.vscode-eslint"
+		],
+		"settings": {
+		  "remote.autoForwardPorts": false
+		}
+	  }
+	}
+  }
+  

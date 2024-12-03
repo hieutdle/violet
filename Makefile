@@ -1,32 +1,27 @@
 # Makefile
 
 .PHONY: test
-
 test:
-	@echo "Running tests..."
-	@go test ./...
-	@echo "All tests passed."
+	@./scripts/unit-tests.sh
 
 .PHONY: format 
-
 format:
-	@echo "Formatting code..."
-	@go fmt ./...
-	@echo "Code formatted."
+	@./scripts/format.sh
+
 
 .PHONY: build
-
 build:
 	@./scripts/build.sh
 
-.PHONY: install
 
+.PHONY: install
 install:
 	@./scripts/install.sh
 
 .PHONY: usage 
-
 usage:
 	@echo "Usage: make test"
 	@echo "       make format"
-
+	@echo "       make build"
+	@echo "       make install"
+	
