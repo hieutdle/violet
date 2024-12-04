@@ -1,8 +1,9 @@
 package update
 
 import (
-	"archive/zip"
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -28,24 +29,35 @@ func Update() error {
 	return nil
 }
 
-// getLatestReleaseBinary fetches the latest release binary for the current OS and architecture
 func getLatestReleaseBinary() (io.Reader, error) {
 	client := github.NewClient(nil)
 	releases, _, err := client.Repositories.ListReleases(context.Background(), "hieutdle", "violet", &github.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch releases: %v", err)
+		return nil, fmt.Errorf("unable to fetch releases: %w", err)
 	}
 
 	// Get the latest release
+	if len(releases) == 0 {
+		return nil, fmt.Errorf("no releases found")
+	}
 	latestRelease := releases[0]
 	assets := latestRelease.Assets
 
 	// Determine the correct file based on the current OS and architecture
+	platform := runtime.GOOS + "_"
+	switch runtime.GOARCH {
+	case "amd64":
+		platform += "64-bit"
+	case "arm64":
+		platform += "arm64"
+	default:
+		return nil, fmt.Errorf("unsupported architecture: %s", runtime.GOARCH)
+	}
 	ext := ".tar.gz"
-	platform := runtime.GOOS + "_" + runtime.GOARCH
+
 	var downloadURL string
 	for _, asset := range assets {
-		// Check if asset matches the platform
+		// Check if asset matches the platform and file extension
 		if strings.Contains(asset.GetName(), platform) && strings.HasSuffix(asset.GetName(), ext) {
 			downloadURL = asset.GetBrowserDownloadURL()
 			break
@@ -59,47 +71,52 @@ func getLatestReleaseBinary() (io.Reader, error) {
 	// Download the file
 	resp, err := http.Get(downloadURL)
 	if err != nil {
-		return nil, fmt.Errorf("unable to download file: %v", err)
+		return nil, fmt.Errorf("unable to download file: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read the entire content into memory
 	buf, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read response body: %v", err)
+		return nil, fmt.Errorf("unable to read response body: %w", err)
 	}
 
 	// Return the content as a bytes.Reader, which implements io.ReaderAt
 	return bytes.NewReader(buf), nil
 }
 
-// applyUpdate applies the update using the minio selfupdate package
 func applyUpdate(reader io.Reader) error {
-	// Use the bytes.Reader (which implements io.ReaderAt) to work with zip
-	zipReader, err := zip.NewReader(reader.(io.ReaderAt), int64(reader.(*bytes.Reader).Len()))
+	// Wrap the reader with gzip
+	gzipReader, err := gzip.NewReader(reader)
 	if err != nil {
-		return fmt.Errorf("unable to read zip file: %v", err)
+		return fmt.Errorf("unable to create gzip reader: %w", err)
 	}
+	defer gzipReader.Close()
 
-	// Get the first file from the zip archive
-	for _, file := range zipReader.File {
-		if file.Name == "violet" {
-			f, err := file.Open()
-			if err != nil {
-				return fmt.Errorf("unable to open file in zip: %v", err)
+	// Create a tar reader
+	tarReader := tar.NewReader(gzipReader)
+
+	// Iterate through the tar archive
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			return fmt.Errorf("error reading tarball: %w", err)
+		}
+
+		// Look for the binary file
+		if header.Typeflag == tar.TypeReg && header.Name == "violet" { // Adjust file name if necessary
+			// Apply the update
+			if err := selfupdate.Apply(tarReader, selfupdate.Options{}); err != nil {
+				return fmt.Errorf("error applying update: %w", err)
 			}
-			defer f.Close()
 
-			// Use the file stream to apply the update
-			if err := selfupdate.Apply(f, selfupdate.Options{}); err != nil {
-				return fmt.Errorf("error applying update: %v", err)
-			}
-
-			// Apply the update (use the reader passed)
 			fmt.Println("Update applied successfully!")
 			return nil
 		}
 	}
 
-	return fmt.Errorf("binary file not found in archive")
+	return fmt.Errorf("binary file not found in tarball")
 }
