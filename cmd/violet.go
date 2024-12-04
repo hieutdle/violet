@@ -32,7 +32,7 @@ func rootCmd() *cobra.Command {
 		Short:         "My personal CLI",
 		SilenceErrors: false,
 		SilenceUsage:  true,
-		Version:       "0.3.0",
+		Version:       "0.4.0",
 	}
 }
 
