@@ -33,7 +33,7 @@ archives:
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Version }}_
-      {{ .Os }}_
+      {{- .Os }}_
       {{- if eq .Arch "amd64" }}64-bit
       {{- else }}{{ .Arch }}{{ end }}
     # use zip for windows archives
