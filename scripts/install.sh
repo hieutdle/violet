@@ -20,13 +20,13 @@ install_binary() {
 }
 
 # Check if Go is installed
-if command -v go &> /dev/null; then
+if command -v go &>/dev/null; then
     echo "Go is installed. Building the binary using build.sh..."
 
-# Navigate to the project root and run build.sh
+    # Navigate to the project root and run build.sh
     cd $PROJECT_ROOT
     ./scripts/build.sh
 
-# Install the binary
+    # Install the binary
     install_binary
 fi

@@ -16,15 +16,19 @@ usage() {
 # Parse the command line arguments
 while getopts "o:s:a:" opt; do
     case $opt in
-        o) OUTPUT=$OPTARG ;;
-        s) GOOS=$OPTARG ;;
-        a) GOARCH=$OPTARG ;;
-        \?) echo "Invalid option: -$OPTARG" >&2
-            usage
-            exit 1 ;;
-        :) echo "Option -$OPTARG requires an argument." >&2
-            usage
-            exit 1 ;;
+    o) OUTPUT=$OPTARG ;;
+    s) GOOS=$OPTARG ;;
+    a) GOARCH=$OPTARG ;;
+    \?)
+        echo "Invalid option: -$OPTARG" >&2
+        usage
+        exit 1
+        ;;
+    :)
+        echo "Option -$OPTARG requires an argument." >&2
+        usage
+        exit 1
+        ;;
     esac
 done
 
